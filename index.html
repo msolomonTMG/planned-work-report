@@ -2,11 +2,13 @@
 
 <head>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+  <script src="https://use.fontawesome.com/6689f7c892.js"></script>
 </head>
 
 <body>
   <div class="container">
     <h1>Completed Work Report</h1>
+
     <form id="report-form">
       <div class="form-group">
         <label for="complete">Completed Issues</label>
@@ -19,13 +21,18 @@
       <button class="btn btn-primary" type="submit">Report</button>
     </form>
 
-    <div id="chart_controls" class="hidden-xl-down float-right">
+    <div id="loading-icon" class="hidden-xl-down text-center">
+      <i class="fa fa-spinner fa-pulse fa-3x fa-fw"></i>
+      <span class="sr-only">Loading...</span>
+    </div>
+
+    <div id="chart_controls" class="hidden-xl-down">
       <div class="btn-group" data-toggle="buttons">
         <label class="btn btn-primary active">
           <input type="radio" name="options" id="points" autocomplete="off" checked> Story Points
         </label>
         <label class="btn btn-primary">
-          <input type="radio" name="options" id="hours" autocomplete="off"> Hours
+          <input type="radio" name="options" id="time" autocomplete="off"> Hours
         </label>
       </div>
     </div>
@@ -52,6 +59,9 @@
 
   $( "form" ).on( "submit", function( event ) {
     event.preventDefault();
+    $('#loading-icon').removeClass('hidden-xl-down')
+    $('#report-form').addClass('hidden-xl-down')
+
     let completeInputStrings = $('#complete').val().split("\n");
     let incompleteInputStrings = $('#incomplete').val().split("\n");
 
@@ -117,21 +127,7 @@
     let completeUnplannedStoryPoints = 0
     let completeUnplannedOriginalEstimateSeconds = 0
 
-    let members = [{
-      name: 'Benjamin Gelinas',
-      incompletePlannedCount: 0,
-      incompletePlannedStoryPoints: 0,
-      incompletePlannedOriginalEstimateSeconds: 0,
-      incompleteUnplannedCount: 0,
-      incompleteUnplannedStoryPoints: 0,
-      incompleteUnplannedOriginalEstimateSeconds: 0,
-      completePlannedCount: 0,
-      completePlannedStoryPoints: 0,
-      completePlannedOriginalEstimateSeconds: 0,
-      completeUnplannedCount: 0,
-      completeUnplannedStoryPoints: 0,
-      completeUnplannedOriginalEstimateSeconds: 0
-    }]
+    let members = []
 
     data.forEach(ticket => {
       console.log(ticket.key)
@@ -245,6 +241,17 @@
 
 
     $('#chart_controls').removeClass('hidden-xl-down');
+    $('#loading-icon').addClass('hidden-xl-down');
+
+    $('#points').change(function() {
+      $('#story_point_chart_div').removeClass('hidden-xl-down')
+      $('#time_chart_div').addClass('hidden-xl-down')
+    })
+
+    $('#time').change(function() {
+      $('#time_chart_div').removeClass('hidden-xl-down')
+      $('#story_point_chart_div').addClass('hidden-xl-down')
+    })
 
     var story_point_chart = new google.visualization.ColumnChart(document.getElementById('story_point_chart_div'));
     story_point_chart.draw(story_point_data, {
@@ -269,6 +276,8 @@
             title: "Time (d)"
         }
     });
+
+    $('#time_chart_div').addClass('hidden-xl-down')
   }
 </script>
 </html>
