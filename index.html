@@ -1,0 +1,226 @@
+<html>
+
+<head>
+</head>
+
+<body>
+  <form id="report-form">
+    <label for="complete">Completed Issues</label>
+    <textarea id="complete" rows="4"></textarea>
+
+    <label for="incomplete">Incomplete Issues</label>
+    <textarea id="incomplete" rows="4"></textarea>
+
+    <button type="submit">Report</button>
+  </form>
+
+  <div id="chart_div" style="width: 100%; height: 100%;"></div>
+</body>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+<script src="https://drrjhlchpvi7e.cloudfront.net/libs/stamplay-js-sdk/2.0.4/stamplay.min.js"></script>
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+<script>
+  'use strict';
+  Stamplay.init("jiraapi");
+  google.charts.load('current', {'packages':['corechart']});
+  //google.charts.setOnLoadCallback(drawVisualization);
+  var codeblock = new Stamplay.Codeblock("jira");
+
+  $( "form" ).on( "submit", function( event ) {
+    event.preventDefault();
+    let completeInputStrings = $('#complete').val().split("\n");
+    let incompleteInputStrings = $('#incomplete').val().split("\n");
+
+    let completedIssuesAdded = [] //issues completed and added to sprint (creep)
+    let completedIssuesPlanned = [] //issues completed and planned for sprint
+
+    let incompletedIssuesAdded = [] //issues incomplete and added to sprint (creep)
+    let incompletedIssuesPlanned = [] //issues incomplete and planned for sprint
+
+    completeInputStrings.forEach(string => {
+      let issueAdded = string.match(/[A-Za-z]+-[0-9]+\s\*/) //matches "STRY-69 *" but not "STRY-69"
+      let issuePlanned = string.match(/(?!\*)[A-Za-z]+-[0-9]+/) //matches "STRY-69" but not "STRY-69 *"
+
+      if (issueAdded) { completedIssuesAdded.push(issueAdded[0].split(' ')[0]) }
+      else if (issuePlanned) { completedIssuesPlanned.push(issuePlanned[0]) }
+    })
+
+    incompleteInputStrings.forEach(string => {
+      let issueAdded = string.match(/[A-Za-z]+-[0-9]+\s\*/) //matches "STRY-69 *" but not "STRY-69"
+      let issuePlanned = string.match(/(?!\*)[A-Za-z]+-[0-9]+/) //matches "STRY-69" but not "STRY-69 *"
+
+      if (issueAdded) { incompletedIssuesAdded.push(issueAdded[0].split(' ')[0]) }
+      else if (issuePlanned) { incompletedIssuesPlanned.push(issuePlanned[0]) }
+    })
+
+    var data = {
+      completedIssuesAdded: completedIssuesAdded,
+      completedIssuesPlanned: completedIssuesPlanned,
+      incompletedIssuesAdded: incompletedIssuesAdded,
+      incompletedIssuesPlanned: incompletedIssuesPlanned
+    };
+
+    console.log('data', data)
+
+    codeblock.run(data).then(function (response) {
+      console.log(response);
+      formatData(response.data)
+    }, function( err ){
+      // error callback
+      console.error(err);
+    });
+
+  });
+
+  function formatData(data) {
+    let incompletePlanned = []
+    let incompletePlannedCount = 0
+    let incompletePlannedStoryPoints = 0
+    let incompletePlannedOriginalEstimateSeconds = 0
+
+    let incompleteUnplanned = []
+    let incompleteUnplannedCount = 0
+    let incompleteUnplannedStoryPoints = 0
+    let incompleteUnplannedOriginalEstimateSeconds = 0
+
+    let completePlanned = []
+    let completePlannedCount = 0
+    let completePlannedStoryPoints = 0
+    let completePlannedOriginalEstimateSeconds = 0
+
+    let completeUnplanned = []
+    let completeUnplannedCount = 0
+    let completeUnplannedStoryPoints = 0
+    let completeUnplannedOriginalEstimateSeconds = 0
+
+    let members = [{
+      name: 'Benjamin Gelinas',
+      incompletePlannedCount: 0,
+      incompletePlannedStoryPoints: 0,
+      incompletePlannedOriginalEstimateSeconds: 0,
+      incompleteUnplannedCount: 0,
+      incompleteUnplannedStoryPoints: 0,
+      incompleteUnplannedOriginalEstimateSeconds: 0,
+      completePlannedCount: 0,
+      completePlannedStoryPoints: 0,
+      completePlannedOriginalEstimateSeconds: 0,
+      completeUnplannedCount: 0,
+      completeUnplannedStoryPoints: 0,
+      completeUnplannedOriginalEstimateSeconds: 0
+    }]
+
+    data.forEach(ticket => {
+      console.log(ticket.key)
+      // individual calculations
+      let individual
+      let matchedMembers = members.filter(function( member ) {
+        return member.name == ticket.assignee;
+      });
+      console.log('individual', matchedMembers)
+      if (matchedMembers.length > 0) {
+        individual = matchedMembers[0]
+        console.log('we have this guy in the array already')
+      } else {
+        console.log('creating member')
+        individual = {
+          name: ticket.assignee,
+          incompletePlannedCount: 0,
+          incompletePlannedStoryPoints: 0,
+          incompletePlannedOriginalEstimateSeconds: 0,
+          incompleteUnplannedCount: 0,
+          incompleteUnplannedStoryPoints: 0,
+          incompleteUnplannedOriginalEstimateSeconds: 0,
+          completePlannedCount: 0,
+          completePlannedStoryPoints: 0,
+          completePlannedOriginalEstimateSeconds: 0,
+          completeUnplannedCount: 0,
+          completeUnplannedStoryPoints: 0,
+          completeUnplannedOriginalEstimateSeconds: 0
+        }
+        members.push(individual)
+        individual = members[members.length-1]
+      }
+      if (ticket.complete && ticket.planned) {
+        completePlanned.push(ticket)
+        completePlannedCount++
+        completePlannedStoryPoints += ticket.storyPoints
+        completePlannedOriginalEstimateSeconds += ticket.originalEstimateSeconds
+
+        individual.completePlannedCount ++
+        individual.completePlannedStoryPoints += ticket.storyPoints
+        individual.completePlannedOriginalEstimateSeconds += ticket.originalEstimateSeconds
+
+      } else if (ticket.complete && !ticket.planned) {
+        completeUnplanned.push(ticket)
+        completeUnplannedCount++
+        completeUnplannedStoryPoints += ticket.storyPoints
+        completeUnplannedOriginalEstimateSeconds += ticket.originalEstimateSeconds
+
+        individual.completeUnplannedCount ++
+        individual.completeUnplannedStoryPoints += ticket.storyPoints
+        individual.completeUnplannedOriginalEstimateSeconds += ticket.originalEstimateSeconds
+
+      } else if (!ticket.complete && ticket.planned) {
+        incompletePlanned.push(ticket)
+        incompletePlannedCount++
+        incompletePlannedStoryPoints += ticket.storyPoints
+        incompletePlannedOriginalEstimateSeconds += ticket.originalEstimateSeconds
+
+        individual.incompletePlannedCount ++
+        individual.incompletePlannedStoryPoints += ticket.storyPoints
+        individual.incompletePlannedOriginalEstimateSeconds += ticket.originalEstimateSeconds
+
+      } else if (!ticket.complete && !ticket.planned) {
+        incompleteUnplanned.push(ticket)
+        incompleteUnplannedCount++
+        incompleteUnplannedStoryPoints += ticket.storyPoints
+        incompleteUnplannedOriginalEstimateSeconds += ticket.originalEstimateSeconds
+
+        individual.incompleteUnplannedCount ++
+        individual.incompleteUnplannedStoryPoints += ticket.storyPoints
+        individual.incompleteUnplannedOriginalEstimateSeconds += ticket.originalEstimateSeconds
+      }
+    })
+
+    console.log('COMPLETED')
+    console.log('-- PLANNED', completePlannedCount)
+    console.log('-- UNPLANNED', completeUnplannedCount)
+
+    console.log('INCOMPLETE')
+    console.log('-- PLANNED', incompletePlannedCount)
+    console.log('-- UNPLANNED', incompleteUnplannedCount)
+
+    console.log('MEMBERS', members)
+    drawVisualization(members)
+  }
+
+  function drawVisualization(members) {
+    var data = new google.visualization.DataTable();
+    data.addColumn('string', '');
+    data.addColumn('number', 'Planned');
+    data.addColumn('number', 'Unplanned');
+    data.addColumn('number', '');
+    data.addColumn('number', '');
+
+    members.forEach(member => {
+      data.addRow([member.name, member.completePlannedStoryPoints + member.incompletePlannedStoryPoints, null, null, null]);
+      data.addRow([member.name, member.completePlannedStoryPoints, member.completeUnplannedStoryPoints, null, null]);
+      data.addRow([null, null, null, null, null]);
+    })
+
+
+    var chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
+    chart.draw(data, {
+        title:"Completed Work Report",
+        hAxis: {
+            showTextEvery: 3
+        },
+        isStacked: true,
+        vAxis: {
+            title: "Story Points"
+        }
+    });
+  }
+</script>
+</html>
