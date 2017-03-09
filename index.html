@@ -1,23 +1,46 @@
 <html>
 
 <head>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
 </head>
 
 <body>
-  <form id="report-form">
-    <label for="complete">Completed Issues</label>
-    <textarea id="complete" rows="4"></textarea>
+  <div class="container">
+    <h1>Completed Work Report</h1>
+    <form id="report-form">
+      <div class="form-group">
+        <label for="complete">Completed Issues</label>
+        <textarea class="form-control" id="complete" rows="4"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="incomplete">Incomplete Issues</label>
+        <textarea class="form-control" id="incomplete" rows="4"></textarea>
+      </div>
+      <button class="btn btn-primary" type="submit">Report</button>
+    </form>
 
-    <label for="incomplete">Incomplete Issues</label>
-    <textarea id="incomplete" rows="4"></textarea>
+    <div id="chart_controls" class="hidden-xl-down float-right">
+      <div class="btn-group" data-toggle="buttons">
+        <label class="btn btn-primary active">
+          <input type="radio" name="options" id="points" autocomplete="off" checked> Story Points
+        </label>
+        <label class="btn btn-primary">
+          <input type="radio" name="options" id="hours" autocomplete="off"> Hours
+        </label>
+      </div>
+    </div>
 
-    <button type="submit">Report</button>
-  </form>
+  </div>
 
-  <div id="chart_div" style="width: 100%; height: 100%;"></div>
+  <div id="story_point_chart_div" style="width: 100%; height: 100%;"></div>
+
+  <div id="time_chart_div" style="width: 100%; height: 100%;"></div>
 </body>
 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
+
 <script src="https://drrjhlchpvi7e.cloudfront.net/libs/stamplay-js-sdk/2.0.4/stamplay.min.js"></script>
 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 <script>
@@ -196,22 +219,35 @@
   }
 
   function drawVisualization(members) {
-    var data = new google.visualization.DataTable();
-    data.addColumn('string', '');
-    data.addColumn('number', 'Planned');
-    data.addColumn('number', 'Unplanned');
-    data.addColumn('number', '');
-    data.addColumn('number', '');
+    var story_point_data = new google.visualization.DataTable();
+    story_point_data.addColumn('string', '');
+    story_point_data.addColumn('number', 'Planned');
+    story_point_data.addColumn('number', 'Unplanned');
+    story_point_data.addColumn('number', '');
+    story_point_data.addColumn('number', '');
+
+    var time_data = new google.visualization.DataTable();
+    time_data.addColumn('string', '');
+    time_data.addColumn('number', 'Planned');
+    time_data.addColumn('number', 'Unplanned');
+    time_data.addColumn('number', '');
+    time_data.addColumn('number', '');
 
     members.forEach(member => {
-      data.addRow([member.name, member.completePlannedStoryPoints + member.incompletePlannedStoryPoints, null, null, null]);
-      data.addRow([member.name, member.completePlannedStoryPoints, member.completeUnplannedStoryPoints, null, null]);
-      data.addRow([null, null, null, null, null]);
+      story_point_data.addRow([member.name, member.completePlannedStoryPoints + member.incompletePlannedStoryPoints, null, null, null]);
+      story_point_data.addRow([member.name, member.completePlannedStoryPoints, member.completeUnplannedStoryPoints, null, null]);
+      story_point_data.addRow([null, null, null, null, null]);
+
+      time_data.addRow([member.name, (member.completePlannedOriginalEstimateSeconds + member.incompletePlannedOriginalEstimateSeconds)/86400, null, null, null]);
+      time_data.addRow([member.name, member.completePlannedOriginalEstimateSeconds / 86400, member.completeUnplannedOriginalEstimateSeconds/ 86400, null, null]);
+      time_data.addRow([null, null, null, null, null]);
     })
 
 
-    var chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
-    chart.draw(data, {
+    $('#chart_controls').removeClass('hidden-xl-down');
+
+    var story_point_chart = new google.visualization.ColumnChart(document.getElementById('story_point_chart_div'));
+    story_point_chart.draw(story_point_data, {
         title:"Completed Work Report",
         hAxis: {
             showTextEvery: 3
@@ -219,6 +255,18 @@
         isStacked: true,
         vAxis: {
             title: "Story Points"
+        }
+    });
+
+    var time_chart = new google.visualization.ColumnChart(document.getElementById('time_chart_div'));
+    time_chart.draw(time_data, {
+        title:"Completed Work Report",
+        hAxis: {
+            showTextEvery: 3
+        },
+        isStacked: true,
+        vAxis: {
+            title: "Time (d)"
         }
     });
   }
